@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import MapView from "./MapView";
+import SpotifyPlayer from "./SpotifyPlayer";
 
 type Message = {
   role: "user" | "model";
@@ -18,6 +19,7 @@ type ActiveMusic = {
   trackName: string;
   artist: string;
   albumArt: string;
+  trackId: string;
   embedUrl: string;
   spotifyUrl: string;
 };
@@ -134,6 +136,7 @@ export default function ChatPage() {
           trackName: data.trackName,
           artist: data.artist,
           albumArt: data.albumArt,
+          trackId: data.trackId,
           embedUrl: data.embedUrl,
           spotifyUrl: data.spotifyUrl,
         });
@@ -230,16 +233,7 @@ export default function ChatPage() {
                   ×
                 </button>
               </div>
-              <iframe
-                // ?autoplay=1 tells Spotify's embed to start playing
-                // immediately instead of waiting for a manual click.
-                src={`${activeMusic.embedUrl}?utm_source=generator&autoplay=1`}
-                width="100%"
-                height="152"
-                style={{ border: 0, borderRadius: 8 }}
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                loading="lazy"
-              />
+              <SpotifyPlayer key={activeMusic.trackId} trackId={activeMusic.trackId} />
             </div>
           ) : (
             <div className="music-widget-empty">No music playing</div>

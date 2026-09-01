@@ -394,6 +394,17 @@ body::after {
   background: var(--panel);
 }
 
+.spotify-player-mount {
+  width: 100%;
+  min-height: 152px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.spotify-player-mount iframe {
+  border-radius: 8px;
+}
+
 /* ---------- Map HUD (MapView.tsx markup, unchanged) ---------- */
 /* The flyTo/terrain/fog animation logic in MapView.tsx is untouched —
    only the surrounding chrome colors are unified with the theme. */

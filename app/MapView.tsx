@@ -70,8 +70,8 @@ export default function MapView({ place, latitude, longitude }: MapViewProps) {
           filter: ["in", "class", "park", "wood", "grass"],
           type: "fill",
           paint: {
-            "fill-color": "#1a3324",
-            "fill-opacity": 0.8,
+            "fill-color": "#0f2b2c",
+            "fill-opacity": 0.75,
           },
         });
       } catch {}
@@ -86,13 +86,37 @@ export default function MapView({ place, latitude, longitude }: MapViewProps) {
         type: "fill-extrusion",
         minzoom: 13,
         paint: {
-          "fill-extrusion-color": "#3a3d48",
+          "fill-extrusion-color": "#1c2733",
           "fill-extrusion-height": ["get", "height"],
           "fill-extrusion-base": ["get", "min_height"],
           "fill-extrusion-opacity": 0.9,
           "fill-extrusion-vertical-gradient": true,
         },
       });
+
+      // Recolor the base dark-v11 style's water, roads, and labels to
+      // match the cyan console theme. Wrapped per-layer in try/catch
+      // since not every layer supports every paint property. This runs
+      // once the style has settled and doesn't touch the flyTo below.
+      try {
+        const styleLayers = map.getStyle()?.layers ?? [];
+        styleLayers.forEach((layer) => {
+          try {
+            if (layer.type === "background") {
+              map.setPaintProperty(layer.id, "background-color", "#03060a");
+            } else if (layer.type === "fill" && layer["source-layer"] === "water") {
+              map.setPaintProperty(layer.id, "fill-color", "#040e18");
+            } else if (layer.type === "line" && layer["source-layer"] === "road") {
+              map.setPaintProperty(layer.id, "line-color", "#153542");
+            } else if (layer.type === "symbol") {
+              map.setPaintProperty(layer.id, "text-color", "#7fd8ea");
+              map.setPaintProperty(layer.id, "text-halo-color", "#03060a");
+            }
+          } catch {
+            // Layer doesn't support this property — skip it.
+          }
+        });
+      } catch {}
 
       map.flyTo({
         center: [longitude, latitude],

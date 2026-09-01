@@ -8,6 +8,7 @@ export type TrackResult = {
   name: string;
   artist: string;
   albumArt: string;
+  trackId: string;
   embedUrl: string;
   spotifyUrl: string;
 };
@@ -86,6 +87,7 @@ export async function searchTrack(query: string): Promise<TrackResult | null> {
     name: track.name,
     artist: track.artists.map((a: { name: string }) => a.name).join(", "),
     albumArt: track.album.images?.[0]?.url ?? "",
+    trackId: track.id,
     embedUrl: `https://open.spotify.com/embed/track/${track.id}`,
     spotifyUrl: track.external_urls.spotify,
   };

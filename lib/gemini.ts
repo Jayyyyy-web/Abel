@@ -77,6 +77,7 @@ export type AskResult =
       trackName: string;
       artist: string;
       albumArt: string;
+      trackId: string;
       embedUrl: string;
       spotifyUrl: string;
     };
@@ -146,6 +147,7 @@ export async function askGemini(
         trackName: track.name,
         artist: track.artist,
         albumArt: track.albumArt,
+        trackId: track.trackId,
         embedUrl: track.embedUrl,
         spotifyUrl: track.spotifyUrl,
       };
