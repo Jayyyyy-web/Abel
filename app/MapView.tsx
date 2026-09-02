@@ -23,7 +23,7 @@ export default function MapView({ place, latitude, longitude }: MapViewProps) {
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: "mapbox://styles/mapbox/dark-v11",
+      style: "mapbox://styles/mapbox/satellite-streets-v12",
       center: [longitude, latitude],
       zoom: 3.5,
       pitch: 0,
@@ -59,22 +59,9 @@ export default function MapView({ place, latitude, longitude }: MapViewProps) {
         "star-intensity": 0.4,
       });
 
-      // Parks/vegetation highlighted green — the lightweight-style
-      // stand-in for trees (dark-v11 doesn't include individual tree
-      // geometry the way the heavier Standard style does).
-      try {
-        map.addLayer({
-          id: "vegetation",
-          source: "composite",
-          "source-layer": "landuse",
-          filter: ["in", "class", "park", "wood", "grass"],
-          type: "fill",
-          paint: {
-            "fill-color": "#0f2b2c",
-            "fill-opacity": 0.75,
-          },
-        });
-      } catch {}
+      // Real satellite imagery shows actual vegetation/terrain now, so
+      // no synthetic vegetation overlay is needed here (that was a
+      // stand-in for the old vector dark-v11 style, which had none).
 
       // Simple building meshes — plain shaded volumes, no pattern,
       // no outline overlay. Just clean solid 3D shapes.
@@ -94,10 +81,14 @@ export default function MapView({ place, latitude, longitude }: MapViewProps) {
         },
       });
 
-      // Recolor the base dark-v11 style's water, roads, and labels to
-      // match the cyan console theme. Wrapped per-layer in try/catch
-      // since not every layer supports every paint property. This runs
-      // once the style has settled and doesn't touch the flyTo below.
+      // Recolor the vector road/label overlay on top of the satellite
+      // imagery to match the cyan console theme. Water and terrain are
+      // baked into the satellite photo itself now, so those branches
+      // are harmless no-ops on this style — left in since the same
+      // code still applies cleanly if the base style ever changes back.
+      // Wrapped per-layer in try/catch since not every layer supports
+      // every paint property. Runs once the style has settled and
+      // doesn't touch the flyTo below.
       try {
         const styleLayers = map.getStyle()?.layers ?? [];
         styleLayers.forEach((layer) => {
