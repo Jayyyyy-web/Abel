@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SYSTEM_PROMPT } from "./personality";
-import { geocodePlace } from "./geocode";
+import { geocodePlace } from "./mapbox";
 import { searchTrack } from "./spotify";
 
 // One shared client, built from the server-only env var.
