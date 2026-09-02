@@ -29,16 +29,27 @@ type SpotifyPlayerProps = {
  * fresh controller instead of trying to update one in place.
  */
 export default function SpotifyPlayer({ trackId }: SpotifyPlayerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
     let controller: any = null;
 
     function createController(IFrameAPI: any) {
-      if (cancelled || !containerRef.current) return;
+      if (cancelled || !wrapperRef.current) return;
+
+      // Spotify's API replaces whatever element it's given with its own
+      // iframe. Handing it the React-ref'd wrapper directly would let
+      // Spotify rip that node out of the DOM behind React's back, so
+      // instead we hand it a plain node created here, appended inside
+      // the wrapper. React only ever manages the wrapper itself — it
+      // never looks inside it — so it stays safe to unmount later no
+      // matter what Spotify has done to its contents.
+      const mount = document.createElement("div");
+      wrapperRef.current.appendChild(mount);
+
       IFrameAPI.createController(
-        containerRef.current,
+        mount,
         { uri: `spotify:track:${trackId}`, width: "100%", height: "152" },
         (EmbedController: any) => {
           if (cancelled) return;
@@ -76,5 +87,5 @@ export default function SpotifyPlayer({ trackId }: SpotifyPlayerProps) {
     };
   }, [trackId]);
 
-  return <div ref={containerRef} className="spotify-player-mount" />;
+  return <div ref={wrapperRef} className="spotify-player-mount" />;
 }
