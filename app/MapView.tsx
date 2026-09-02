@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
-
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+import { loadGoogleMaps } from "../lib/googleMapsLoader";
 
 type MapViewProps = {
   place: string;
@@ -12,134 +9,76 @@ type MapViewProps = {
   longitude: number;
 };
 
+// Camera framing, in Google's terms instead of Mapbox's zoom/pitch/bearing:
+//   range   = distance from camera to target, in meters (bigger = further out)
+//   tilt    = degrees off straight-down (0 = looking straight down, 90 = horizon)
+//   heading = compass direction the camera faces, in degrees
+const WIDE_CAMERA = { range: 8_000_000, tilt: 0, heading: 0 };
+const CLOSE_CAMERA = { range: 900, tilt: 65, heading: 110 };
+const FLY_IN_DURATION_MS = 4200;
+
 export default function MapView({ place, latitude, longitude }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const map3DRef = useRef<any>(null);
   const [entering, setEntering] = useState(true);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    let cancelled = false;
     setEntering(true);
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/dark-v11",
-      center: [longitude, latitude],
-      zoom: 3.5,
-      pitch: 0,
-      bearing: 0,
-      antialias: true,
-    });
-    mapRef.current = map;
+    async function init() {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+      await loadGoogleMaps(apiKey);
+      if (cancelled || !containerRef.current) return;
 
-    map.on("load", () => {
-      map.addSource("mapbox-dem", {
-        type: "raster-dem",
-        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
-        tileSize: 512,
-        maxzoom: 12,
+      const google = (window as any).google;
+      const { Map3DElement } = await google.maps.importLibrary("maps3d");
+      const { Marker3DElement } = await google.maps.importLibrary("maps3d");
+      if (cancelled || !containerRef.current) return;
+
+      // Start pulled back looking straight down, matching the previous
+      // Mapbox intro framing, before flying in close and tilted.
+      const map3D = new Map3DElement({
+        center: { lat: latitude, lng: longitude, altitude: 0 },
+        range: WIDE_CAMERA.range,
+        tilt: WIDE_CAMERA.tilt,
+        heading: WIDE_CAMERA.heading,
+        mode: "SATELLITE",
       });
-      map.setTerrain({ source: "mapbox-dem", exaggeration: 2.2 });
+      map3DRef.current = map3D;
 
-      map.addLayer({
-        id: "sky",
-        type: "sky",
-        paint: {
-          "sky-type": "atmosphere",
-          "sky-atmosphere-sun-intensity": 10,
+      // Appended as a child of the React-ref'd container, never replacing
+      // the container itself — same reasoning as the Spotify player, so
+      // React's own cleanup of this div is never fighting Google's.
+      containerRef.current.appendChild(map3D);
+
+      const marker = new Marker3DElement({
+        position: { lat: latitude, lng: longitude, altitude: 0 },
+      });
+      map3D.append(marker);
+
+      map3D.flyCameraTo({
+        endCamera: {
+          center: { lat: latitude, lng: longitude, altitude: 200 },
+          range: CLOSE_CAMERA.range,
+          tilt: CLOSE_CAMERA.tilt,
+          heading: CLOSE_CAMERA.heading,
         },
+        durationMillis: FLY_IN_DURATION_MS,
       });
 
-      map.setFog({
-        range: [0.5, 10],
-        color: "#2a2f45",
-        "horizon-blend": 0.3,
-        "high-color": "#1b1e33",
-        "space-color": "#0a0b14",
-        "star-intensity": 0.4,
-      });
+      setTimeout(() => {
+        if (!cancelled) setEntering(false);
+      }, FLY_IN_DURATION_MS);
+    }
 
-      // Parks/vegetation highlighted green — the lightweight-style
-      // stand-in for trees (dark-v11 doesn't include individual tree
-      // geometry the way the heavier Standard style does).
-      try {
-        map.addLayer({
-          id: "vegetation",
-          source: "composite",
-          "source-layer": "landuse",
-          filter: ["in", "class", "park", "wood", "grass"],
-          type: "fill",
-          paint: {
-            "fill-color": "#0f2b2c",
-            "fill-opacity": 0.75,
-          },
-        });
-      } catch {}
+    init();
 
-      // Simple building meshes — plain shaded volumes, no pattern,
-      // no outline overlay. Just clean solid 3D shapes.
-      map.addLayer({
-        id: "3d-buildings",
-        source: "composite",
-        "source-layer": "building",
-        filter: ["==", "extrude", "true"],
-        type: "fill-extrusion",
-        minzoom: 13,
-        paint: {
-          "fill-extrusion-color": "#1c2733",
-          "fill-extrusion-height": ["get", "height"],
-          "fill-extrusion-base": ["get", "min_height"],
-          "fill-extrusion-opacity": 0.9,
-          "fill-extrusion-vertical-gradient": true,
-        },
-      });
-
-      // Recolor the base dark-v11 style's water, roads, and labels to
-      // match the cyan console theme. Wrapped per-layer in try/catch
-      // since not every layer supports every paint property. This runs
-      // once the style has settled and doesn't touch the flyTo below.
-      try {
-        const styleLayers = map.getStyle()?.layers ?? [];
-        styleLayers.forEach((layer) => {
-          try {
-            if (layer.type === "background") {
-              map.setPaintProperty(layer.id, "background-color", "#03060a");
-            } else if (layer.type === "fill" && layer["source-layer"] === "water") {
-              map.setPaintProperty(layer.id, "fill-color", "#040e18");
-            } else if (layer.type === "line" && layer["source-layer"] === "road") {
-              map.setPaintProperty(layer.id, "line-color", "#153542");
-            } else if (layer.type === "symbol") {
-              map.setPaintProperty(layer.id, "text-color", "#7fd8ea");
-              map.setPaintProperty(layer.id, "text-halo-color", "#03060a");
-            }
-          } catch {
-            // Layer doesn't support this property — skip it.
-          }
-        });
-      } catch {}
-
-      map.flyTo({
-        center: [longitude, latitude],
-        zoom: 15.5,
-        pitch: 70,
-        bearing: 120,
-        duration: 4200,
-        curve: 1.4,
-        essential: true,
-      });
-
-      setTimeout(() => setEntering(false), 4200);
-    });
-
-    map.addControl(new mapboxgl.NavigationControl(), "top-right");
-    map.dragRotate.enable();
-    map.touchZoomRotate.enableRotation();
-
-    new mapboxgl.Marker({ color: "#ff3b3b" })
-      .setLngLat([longitude, latitude])
-      .addTo(map);
-
-    return () => map.remove();
+    return () => {
+      cancelled = true;
+      map3DRef.current?.remove?.();
+      map3DRef.current = null;
+    };
   }, [latitude, longitude]);
 
   return (

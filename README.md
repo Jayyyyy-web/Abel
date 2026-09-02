@@ -43,11 +43,12 @@ When you're ready to put this online instead of just running it locally:
    (same value as your `.env.local`).
 4. Deploy. Vercel's free tier covers this comfortably for personal use.
 
-## What's next (not built yet)
+## Map & Spotify setup
 
-- **Memory**: persist `messages` to a database (Supabase free tier) instead
-  of just React state, so history survives a page refresh / new session.
-- **Map tool**: add a Gemini function-calling tool that triggers a Mapbox
-  3D map component when you ask to see a place.
-
-Ask Claude to build either of those next, one at a time.
+- **Map**: uses Google's Photorealistic 3D Tiles (`google.maps.maps3d`) for
+  the Earth-style flyover, plus the Geocoding API to resolve place names.
+  Needs `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (browser) and `GOOGLE_MAPS_API_KEY`
+  (server) — see the setup steps Claude walked through in chat.
+- **Spotify**: needs `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`.
+- **Memory**: persists chat history to Supabase — needs `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY`.

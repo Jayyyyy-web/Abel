@@ -1,13 +1,13 @@
 // A curated list of major world landmarks with verified exact coordinates.
 // Checked BEFORE live geocoding — this makes famous monuments reliably
-// accurate instead of depending on Mapbox's search ranking, which can
+// accurate instead of depending on a geocoder's search ranking, which can
 // sometimes surface a nearby district or generic area instead of the
 // landmark itself.
 //
 // Add more entries anytime: { aliases: [...names people might type],
 // name: "Display name", latitude, longitude }
 
-import { GeocodeResult } from "./mapbox";
+import { GeocodeResult } from "./geocode";
 
 type Landmark = {
   aliases: string[];
