@@ -78,6 +78,13 @@ export default function MapView({ place, latitude, longitude }: MapViewProps) {
           "fill-extrusion-base": ["get", "min_height"],
           "fill-extrusion-opacity": 0.9,
           "fill-extrusion-vertical-gradient": true,
+          // Buildings default to a flat height reference while terrain
+          // undulates beneath them, which is what causes them to look
+          // partly buried on sloped ground. Following the terrain slope
+          // for both base and height keeps the whole building volume
+          // sitting correctly on the land mesh.
+          "fill-extrusion-base-alignment": "terrain",
+          "fill-extrusion-height-alignment": "terrain",
         },
       });
 
