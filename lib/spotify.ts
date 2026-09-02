@@ -1,5 +1,5 @@
-// Searches Spotify for a track using the Client Credentials flow — this
-// works with just an app's Client ID/Secret, no user login required,
+// Searches Spotify for tracks/albums using the Client Credentials flow —
+// this works with just an app's Client ID/Secret, no user login required,
 // and is entirely free. Good for search + embeddable playback; it does
 // NOT let us control someone's actual Spotify playback (that needs full
 // user OAuth, a bigger feature for another day if you want it later).
@@ -13,6 +13,14 @@ export type TrackResult = {
   spotifyUrl: string;
 };
 
+export type AlbumResult = {
+  name: string;
+  artist: string;
+  albumArt: string;
+  albumId: string;
+  spotifyUrl: string;
+};
+
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
@@ -22,13 +30,6 @@ async function getAccessToken(): Promise<string> {
 
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-
-  // Temporary debug line — confirms the env vars are actually loaded.
-  console.log(
-    "Spotify creds loaded:",
-    clientId ? `client id starts with "${clientId.slice(0, 4)}..."` : "NO client id",
-    clientSecret ? "client secret present" : "NO client secret"
-  );
 
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
@@ -40,8 +41,6 @@ async function getAccessToken(): Promise<string> {
     },
     body: "grant_type=client_credentials",
   });
-
-  console.log("Spotify token response status:", res.status);
 
   if (!res.ok) {
     const errBody = await res.text();
@@ -68,8 +67,6 @@ export async function searchTrack(query: string): Promise<TrackResult | null> {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  console.log("Spotify search response status:", res.status);
-
   if (!res.ok) {
     const errBody = await res.text();
     console.log("Spotify search error body:", errBody);
@@ -78,10 +75,7 @@ export async function searchTrack(query: string): Promise<TrackResult | null> {
 
   const data = await res.json();
   const track = data.tracks?.items?.[0];
-  if (!track) {
-    console.log("Spotify search succeeded but found no tracks for:", query);
-    return null;
-  }
+  if (!track) return null;
 
   return {
     name: track.name,
@@ -90,5 +84,35 @@ export async function searchTrack(query: string): Promise<TrackResult | null> {
     trackId: track.id,
     embedUrl: `https://open.spotify.com/embed/track/${track.id}`,
     spotifyUrl: track.external_urls.spotify,
+  };
+}
+
+export async function searchAlbum(query: string): Promise<AlbumResult | null> {
+  const token = await getAccessToken();
+
+  const url = `https://api.spotify.com/v1/search?q=${encodeURIComponent(
+    query
+  )}&type=album&limit=1`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.log("Spotify album search error body:", errBody);
+    return null;
+  }
+
+  const data = await res.json();
+  const album = data.albums?.items?.[0];
+  if (!album) return null;
+
+  return {
+    name: album.name,
+    artist: album.artists.map((a: { name: string }) => a.name).join(", "),
+    albumArt: album.images?.[0]?.url ?? "",
+    albumId: album.id,
+    spotifyUrl: album.external_urls.spotify,
   };
 }

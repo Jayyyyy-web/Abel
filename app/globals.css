@@ -396,7 +396,6 @@ body::after {
 
 .spotify-player-mount {
   width: 100%;
-  min-height: 152px;
   border-radius: 8px;
   overflow: hidden;
 }

@@ -19,8 +19,8 @@ type ActiveMusic = {
   trackName: string;
   artist: string;
   albumArt: string;
-  trackId: string;
-  embedUrl: string;
+  mediaId: string;
+  mediaType: "track" | "album";
   spotifyUrl: string;
 };
 
@@ -136,8 +136,8 @@ export default function ChatPage() {
           trackName: data.trackName,
           artist: data.artist,
           albumArt: data.albumArt,
-          trackId: data.trackId,
-          embedUrl: data.embedUrl,
+          mediaId: data.mediaId,
+          mediaType: data.mediaType,
           spotifyUrl: data.spotifyUrl,
         });
       } else {
@@ -233,7 +233,11 @@ export default function ChatPage() {
                   ×
                 </button>
               </div>
-              <SpotifyPlayer key={activeMusic.trackId} trackId={activeMusic.trackId} />
+              <SpotifyPlayer
+                key={activeMusic.mediaId}
+                id={activeMusic.mediaId}
+                mediaType={activeMusic.mediaType}
+              />
             </div>
           ) : (
             <div className="music-widget-empty">No music playing</div>

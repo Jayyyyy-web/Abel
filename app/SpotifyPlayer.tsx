@@ -13,7 +13,8 @@ declare global {
 const SPOTIFY_IFRAME_API_SRC = "https://open.spotify.com/embed/iframe-api/v1";
 
 type SpotifyPlayerProps = {
-  trackId: string;
+  id: string;
+  mediaType?: "track" | "album";
 };
 
 /**
@@ -22,13 +23,13 @@ type SpotifyPlayerProps = {
  *
  * Why: a plain iframe's autoplay query param is not something browsers
  * reliably honor for cross-origin, unmuted audio. Calling the API's own
- * `.play()` method, as a direct continuation of the user's "play this
- * song" request, is what browsers actually treat as permitted playback.
+ * `.play()` method, as a direct continuation of the user's "play this"
+ * request, is what browsers actually treat as permitted playback.
  *
- * Mount with `key={trackId}` from the parent so each new track gets a
+ * Mount with `key={id}` from the parent so each new track/album gets a
  * fresh controller instead of trying to update one in place.
  */
-export default function SpotifyPlayer({ trackId }: SpotifyPlayerProps) {
+export default function SpotifyPlayer({ id, mediaType = "track" }: SpotifyPlayerProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,9 +49,14 @@ export default function SpotifyPlayer({ trackId }: SpotifyPlayerProps) {
       const mount = document.createElement("div");
       wrapperRef.current.appendChild(mount);
 
+      // Albums show a tracklist, so they need more vertical room than
+      // a single compact track embed — 352px matches Spotify's own
+      // default "normal" embed size for albums/playlists.
+      const height = mediaType === "album" ? "352" : "152";
+
       IFrameAPI.createController(
         mount,
-        { uri: `spotify:track:${trackId}`, width: "100%", height: "152" },
+        { uri: `spotify:${mediaType}:${id}`, width: "100%", height },
         (EmbedController: any) => {
           if (cancelled) return;
           controller = EmbedController;
@@ -85,7 +91,7 @@ export default function SpotifyPlayer({ trackId }: SpotifyPlayerProps) {
       cancelled = true;
       controller?.destroy?.();
     };
-  }, [trackId]);
+  }, [id, mediaType]);
 
   return <div ref={wrapperRef} className="spotify-player-mount" />;
 }
